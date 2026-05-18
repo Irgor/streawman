@@ -11,9 +11,9 @@
 - [ ] `.gitignore` at root covers: C++ build artifacts (`build/`, `CMakeFiles/`, `*.o`, `*.a`, `*.so`), node_modules, `.env*`, compiled binaries, media files (`*.mp4`, `*.ts`, `*.jpg`, `*.png`)
 - [ ] `README.md` at root describes the project (one paragraph), lists the four services, and has a "How to run" section with a placeholder
 - [ ] Each service directory has an empty `.gitkeep` so the folders are tracked by git
-**Status**: in-progress
+**Status**: done
 **Started**: 2026-05-18
-**QA verdict**: (pending)
+**QA verdict**: READY — all directories created, .gitignore and README in place.
 
 ### Notes
 First task — no code, just structure. Goal is a clean repo skeleton that matches the monorepo layout defined in architecture docs.
