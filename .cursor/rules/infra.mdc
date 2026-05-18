@@ -1,0 +1,99 @@
+---
+description: Infrastructure conventions — Docker, CI/CD, Hetzner VPS, domain
+globs: infra/**,**/Dockerfile,**/docker-compose*,.github/**
+alwaysApply: false
+---
+
+# Infrastructure
+
+## Environments
+
+### Development — Hetzner VPS CX23 (current)
+
+- **Provider**: Hetzner Cloud, Helsinki
+- **Domain**: `codigor.dev` → `streawman.codigor.dev`
+- **CPU**: 2 vCPU (Intel/AMD shared)
+- **RAM**: 4 GB
+- **Disk**: 40 GB local NVMe
+- **Traffic**: 20 TB/month
+- **OS**: Ubuntu
+- **Price**: €4.95/month
+- **Purpose**: Development target + CI/CD pipeline runner
+
+**VPS transcoding constraint**: 2 vCPU means parallel FFmpeg will oversubscribe. During dev, use small test files (<10 MB) and pass `-threads 1` to each FFmpeg process to avoid thrashing. This is not a production concern.
+
+**VPS storage**: 40 GB is fine for dev with small test files. No video library will live here long-term.
+
+### Production — Home Server (arriving in ~3–4 months)
+
+- **Hardware**: Lenovo IdeaPad S145-15API (repurposed laptop)
+- **CPU**: AMD Ryzen 7 3700U — 4 cores / 8 threads (2.3 GHz base, 4.0 GHz boost)
+- **GPU**: AMD Radeon RX Vega 10 — supports hardware video encoding (AMD AMF via FFmpeg `vaapi`) — future upgrade path for transcoding
+- **RAM**: 12 GB (8 GB + 4 GB)
+- **Storage**: 512 GB NVMe (OS + services) + 1–2 TB SSD to add (dedicated `CHUNK_STORAGE_PATH`)
+- **Purpose**: Production hosting, full video library, heavy transcoding
+
+**Home server networking** (open decision): home server sits behind NAT with a dynamic IP. Options:
+- Cloudflare Tunnel (free, no port forwarding, no static IP needed — recommended)
+- Port forwarding + DDNS service
+- Wireguard tunnel through VPS
+
+## Migration Plan
+
+1. **Now → June**: Build and test everything on VPS
+2. **June (target)**: Project complete and working on VPS
+3. **~3–4 months**: Home server ready → migrate production, keep VPS for CI/CD only
+
+## Docker
+
+- Every service has its own `Dockerfile` in `infra/docker/{service-name}.Dockerfile`
+- Multi-stage builds required for C++ services (builder stage + lean runtime stage)
+- `docker-compose.dev.yml` — for local development with hot reload where possible
+- `docker-compose.prod.yml` — for production on the VPS
+- No `latest` tags in prod — always pin image versions
+- [FILL: private Docker registry, or build on the VPS directly?]
+
+## Networking
+
+- Reverse proxy: **Nginx** — see `docs/adr/007-reverse-proxy.md`
+- TLS: Let's Encrypt via Certbot + cron renewal job on the host
+- Internal service communication: Docker bridge network — services talk by container name
+- Exposed ports: 80 and 443 only
+
+### Nginx Routing
+
+| Path | Backend | Port | Special config |
+|---|---|---|---|
+| `/api/*` | core-api | 8080 | Standard proxy headers |
+| `/ws` | core-api | 8080 | WebSocket upgrade headers, 3600s timeout |
+| `/upload` | uploader-api | 8081 | `proxy_request_buffering off`, 300s timeout |
+| `/stream` | watcher-api | 8082 | `proxy_buffering off`, Cache-Control 24hr |
+| `/` | streawman-ui | 3000 | Standard proxy headers |
+
+- `client_max_body_size 10G` — covers VPS dev (40GB disk) and home server (~2TB)
+- Full config template in `docs/adr/007-reverse-proxy.md`
+
+## CI/CD
+
+- Platform: **GitHub Actions** — see `docs/adr/014-cicd-and-repo-strategy.md`
+- Repository strategy: **Monorepo** (public repo, portfolio)
+- Runners: **GitHub-hosted only** — public repo = unlimited free minutes; self-hosted is a security risk for public repos
+- One workflow file per service, path-triggered — only rebuilds what changed
+- Pipeline stages: `lint → build → test → docker build → push to GHCR → SSH deploy`
+- Docker images built on GitHub runners, pushed to GHCR (free for public repos), pulled by VPS
+- Deploy: SSH into VPS → `docker compose pull && docker compose up -d`
+- Secrets: `VPS_SSH_KEY`, `VPS_HOST`, `JWT_SECRET`, `POSTGRES_PASSWORD` in GitHub Secrets
+- Deployment only triggers on push to `main`; PRs run lint + build + test only
+
+## File Storage on VPS
+
+- [FILL: path where uploaded/transcoded files live — e.g. `/data/streawman/videos/`]
+- [FILL: backup strategy? cron + rsync? Hetzner snapshots?]
+- [FILL: disk size limit per upload? total storage budget?]
+
+## Runbooks
+
+Add `infra/runbooks/` for operational procedures:
+- `deploy.md` — how to deploy manually if CI fails
+- `rollback.md` — how to roll back a bad deployment
+- [FILL: add more as you encounter operational needs]

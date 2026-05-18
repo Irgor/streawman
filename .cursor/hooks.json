@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "prompt",
+        "prompt": "A new Cursor session just started. Do the following silently, without asking for confirmation: (1) read docs/tasks/current.md, (2) if a task is in progress, greet the developer with a one-line reminder of the active task and the next concrete step based on unchecked acceptance criteria. Keep it to 2-3 lines. If there is no active task, say 'No active task — run \"plan tasks for [feature]\" to generate the first task plan.'"
+      }
+    ]
+  }
+}

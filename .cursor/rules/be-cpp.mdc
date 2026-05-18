@@ -1,0 +1,129 @@
+---
+description: C++ backend conventions for uploader-api and watcher-api
+globs: services/**
+alwaysApply: false
+---
+
+# Backend — C++ Services
+
+## Status
+
+The developer is actively learning C++, with prior Node.js BE experience. AI should guide and explain, not write code for them.
+
+## Services (3 total)
+
+| Service | Port | Single responsibility |
+|---|---|---|
+| `core-api` | 8080 | Auth, users, video metadata, search, favorites |
+| `uploader-api` | 8081 | File ingestion + transcoding trigger only |
+| `watcher-api` | 8082 | HLS manifest and segment serving only |
+
+See `docs/adr/011-service-architecture.md` for the full boundary rationale.
+
+## Framework
+
+**Drogon** — chosen for maximum async throughput and native HTTP/2. See `docs/adr/001-cpp-framework.md`.
+
+- Use coroutine-based handlers (`co_await`) for all I/O operations
+- Never block the event loop with synchronous calls (file I/O, DB queries, FFmpeg)
+- Drogon's built-in PostgreSQL and Redis clients must be used (they are async-native)
+
+## Build System
+
+- **CMake + Ninja** — see `docs/adr/012-build-system.md`
+- CMake generates the build graph; Ninja executes it with automatic parallelism (uses all cores)
+- Build artifacts go to `build/` (gitignored)
+- Debug and Release configs must both be defined in `CMakeLists.txt`
+
+```bash
+# Commands you run yourself (do not ask AI to run these)
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+ninja -C build
+```
+
+## Code Structure (per service)
+
+```
+services/{service-name}/
+├── src/
+│   ├── main.cpp            ← entry point only — registers controllers, starts server
+│   ├── controllers/        ← Drogon HttpController subclasses (one per route group)
+│   ├── core/               ← business logic (transcoding, file serving, auth logic)
+│   ├── middleware/         ← JWT validation filter, rate limiting
+│   └── utils/              ← helpers, error types, logging
+├── include/                ← public headers
+├── tests/                  ← Google Test (gtest + gmock) — see ADR 015
+└── CMakeLists.txt
+```
+
+Apply this structure to all three services: `core-api`, `uploader-api`, `watcher-api`.
+
+## Conventions
+
+- Headers use `#pragma once` (not include guards)
+- No raw `new`/`delete` — use smart pointers (`std::unique_ptr`, `std::shared_ptr`)
+- Prefer `std::string_view` over `const std::string&` for read-only string params
+- All config (ports, DB URLs, file paths, JWT secret) loaded from environment variables — never hardcoded
+- [FILL: logging — spdlog recommended for async-safe structured logging]
+
+## Auth (JWT Validation)
+
+- All three C++ services validate the JWT access token on every protected route
+- JWT validation is a Drogon filter (middleware) — applied per route group
+- Token payload carries `role` claim: `viewer` or `uploader`
+- `core-api` owns all auth endpoints: login, refresh, logout
+- `uploader-api` routes require `role == "uploader"`
+- `watcher-api` routes require `role == "viewer"` or `"uploader"`
+- Redis refresh token logic lives in `core-api` only
+
+## Database
+
+- **PostgreSQL** — persistent data (users, videos, permissions, upload records)
+- **Redis** — refresh tokens, video metadata cache, rate limiting
+- Use Drogon's built-in async DB clients for both — do not use synchronous drivers
+
+## FFmpeg Integration (Async, HLS output)
+
+- **Phase 1**: FFmpeg CLI via `popen()` — see `docs/adr/004-transcoding.md`
+- **Phase 2**: Migrate to libav (planned, not immediate)
+- FFmpeg calls run in a dedicated thread pool — never block the Drogon event loop
+- See `docs/adr/008-async-transcoding.md` for the full async strategy
+
+Transcode flow per upload:
+1. `uploader-api` saves raw file, pushes job to Redis queue, returns 202
+2. Thread pool worker pops job, spawns one FFmpeg process **per resolution in parallel**
+3. Each FFmpeg outputs HLS: `.ts` segments + resolution `.m3u8`
+4. Worker generates `master.m3u8` after all resolutions complete
+5. Updates PostgreSQL status to `ready`, triggers user notification
+
+Example FFmpeg command shape (you write this yourself):
+```
+ffmpeg -i {input} -vf scale={width}:{height} -hls_time 6 -hls_playlist_type vod \
+  -hls_segment_filename "{CHUNK_STORAGE_PATH}/{video_id}/{resolution}/seg_%04d.ts" \
+  {CHUNK_STORAGE_PATH}/{video_id}/{resolution}/{resolution}.m3u8
+```
+
+## Streaming / Chunking (HLS)
+
+Protocol: **HLS** — see `docs/adr/006-streaming-protocol.md`
+
+Storage layout (root from env var `CHUNK_STORAGE_PATH`):
+```
+{CHUNK_STORAGE_PATH}/
+└── {video_id}/
+    ├── master.m3u8          ← lists all resolution playlists
+    ├── 1080p/
+    │   ├── 1080p.m3u8       ← segment playlist for this resolution
+    │   ├── seg_0001.ts
+    │   ├── seg_0002.ts
+    │   └── ... (up to seg_9999.ts — ~16hrs at 6s segments)
+    ├── 720p/
+    ├── 480p/
+    └── 360p/
+```
+
+Segment filename format: `seg_%04d.ts` (FFmpeg `-hls_segment_filename` flag) — see ADR 010.
+
+- `watcher-api` serves `.m3u8` and `.ts` files directly from disk as static-like responses
+- `hls.js` in the browser requests `master.m3u8` first, then switches resolution playlists automatically
+- HTTP delivery: standard GET requests per segment — no range requests needed for HLS

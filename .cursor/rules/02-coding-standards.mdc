@@ -1,0 +1,71 @@
+---
+description: Cross-language coding standards and conventions
+alwaysApply: true
+---
+
+# Coding Standards
+
+## General (all languages)
+
+- Explicit over implicit — if it's not obvious, name it clearly
+- No dead code committed — remove before pushing, not "maybe later"
+- Every public API (function, endpoint, component) gets a comment explaining *why* it exists, not what it does
+- Environment-specific values go in `.env` files, never hardcoded
+- Commit convention: **Conventional Commits** (see Git Workflow below)
+
+## Naming Conventions
+
+| Concept | Convention |
+|---|---|
+| Files (TS/TSX) | `kebab-case.ts` |
+| Files (C++) | `snake_case.cpp / .h` |
+| React components | `PascalCase` |
+| C++ classes | `PascalCase` |
+| C++ functions | `snake_case` |
+| Environment vars | `SCREAMING_SNAKE_CASE` |
+| API routes | `/api/v1/resource/:id` — versioned from day one |
+
+## Error Handling
+
+- Never swallow errors silently
+- C++: use return codes + structured error types, not raw exceptions for control flow
+- TypeScript: always `catch (e)` with a log and a typed re-throw or user-facing message
+- HTTP errors must return a consistent JSON shape: `{ "error": "message", "code": "ERROR_CODE" }`
+
+## Git Workflow
+
+### Branches
+```
+main                          ← protected, always deployable, never commit directly
+feat/TASK-NNN-description     ← new features
+fix/TASK-NNN-description      ← bug fixes
+infra/description             ← Docker, Nginx, CI changes
+docs/description              ← ADRs, system design, README only
+```
+
+One task = one branch = one PR. No exceptions.
+
+### Commit Convention (Conventional Commits)
+```
+feat(scope): description       ← new capability
+fix(scope): description        ← bug fix
+test(scope): description       ← adding/updating tests
+infra(scope): description      ← infrastructure change
+docs(scope): description       ← documentation only
+refactor(scope): description   ← no behavior change
+chore(scope): description      ← build, tooling
+wip(scope): description        ← work in progress, not final
+```
+
+**Scope** = service or area: `core-api`, `uploader-api`, `watcher-api`, `streawman-ui`, `docker`, `nginx`, `ci`, `adr`
+
+Examples:
+- `feat(core-api): add JWT validation middleware`
+- `fix(uploader-api): handle missing file in transcoder`
+- `wip(core-api): auth handler skeleton — not ready`
+
+### PR Rules
+- `wip:` commits allowed freely during development — must be replaced or squashed before PR opens
+- PR title follows the same conventional commit format as commits
+- Before opening a PR on GitHub, run "review task" in Cursor chat — AI checks every acceptance criterion and returns READY / NOT READY
+- PRs merge to `main` only after all acceptance criteria are checked off in `docs/tasks/current.md` and the review verdict is READY

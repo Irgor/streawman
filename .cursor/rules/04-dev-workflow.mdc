@@ -1,0 +1,146 @@
+---
+description: Development workflow — task planning, code review, QA, and scrum modes
+alwaysApply: true
+---
+
+# Development Workflow
+
+This rule defines how AI assists across four distinct workflow modes. The developer works incrementally — `wip:` commits are free, validation happens at PR open time.
+
+## Task Board
+
+```
+docs/tasks/
+├── backlog.md   ← all planned tasks, ordered by dependency
+├── current.md  ← the ONE task currently in progress
+└── done.md     ← completed tasks with QA verdict and date
+```
+
+Always read `docs/tasks/current.md` at the start of any development conversation to understand what's being worked on.
+
+## Task Format
+
+Every task in the board follows this exact structure:
+
+```markdown
+## TASK-NNN: Short title
+**Branch**: `feat/TASK-NNN-short-description`
+**Service**: core-api | uploader-api | watcher-api | streawman-ui | infra | docs
+**Depends on**: TASK-NNN (or "none")
+**Acceptance criteria**:
+- [ ] Criterion 1 — specific and verifiable
+- [ ] Criterion 2
+- [ ] Tests written for all criteria
+- [ ] No linter errors
+**Status**: backlog | in-progress | in-review | done
+**QA verdict**: (filled after review)
+```
+
+## Git Flow
+
+```
+main                          ← protected, always deployable
+feat/TASK-NNN-description     ← feature work
+fix/TASK-NNN-description      ← bug fixes
+infra/description             ← Docker, Nginx, CI changes
+docs/description              ← ADRs, system design, README only
+```
+
+- Never commit directly to `main`
+- One task = one branch = one PR
+- `wip:` commits allowed freely during development
+- All `wip:` commits must be replaced or squashed before the PR is opened
+
+## Commit Convention (Conventional Commits)
+
+```
+feat(scope): description       ← new capability
+fix(scope): description        ← bug fix
+test(scope): description       ← adding/updating tests
+infra(scope): description      ← infrastructure change
+docs(scope): description       ← documentation only
+refactor(scope): description   ← no behavior change
+chore(scope): description      ← build, tooling
+wip(scope): description        ← work in progress, not final
+```
+
+Scope = service or area: `core-api`, `uploader-api`, `watcher-api`, `streawman-ui`, `docker`, `nginx`, `ci`, `adr`
+
+## Mode 1 — Planner
+
+**Triggered by**: "plan tasks for [service/feature]" or "generate task list for X"
+
+**Behavior**:
+- Break the feature into the smallest independently shippable tasks
+- Order tasks by dependency (no task should require a later task to be done first)
+- Write specific, verifiable acceptance criteria for each (not vague — "JWT middleware validates token signature and returns 401 on expiry" not "auth works")
+- Assign branch names and service labels
+- Write tasks directly to `docs/tasks/backlog.md`
+- Confirm with developer before writing if the scope is ambiguous
+
+**Does not**: write implementation code, make technology decisions, skip criteria
+
+## Mode 2 — Reviewer
+
+**Triggered by**: "review task" or "review TASK-NNN" — run this manually before opening a PR on GitHub
+
+**Behavior**:
+- Read `docs/tasks/current.md` to get acceptance criteria
+- Review the code changes against each criterion
+- Check that tests exist and cover each criterion
+- Check for code quality issues (naming, error handling, dead code)
+- Give a structured verdict:
+
+```
+## Review: TASK-NNN — [title]
+
+### Acceptance Criteria
+- ✅ Criterion 1 — [brief reason]
+- ❌ Criterion 2 — [what's missing or wrong]
+
+### Code Quality
+- [observations]
+
+### Verdict: READY / NOT READY
+[1-2 sentence summary of what must be fixed before merge, or why it's ready]
+```
+
+**Does not**: rewrite code, make the fix for the developer, approve without checking every criterion
+
+## Mode 3 — QA
+
+**Triggered by**: "qa check" or "check tests for TASK-NNN"
+
+**Behavior**:
+- Verify tests exist for every acceptance criterion
+- Check test quality: are edge cases covered? are mocks used correctly?
+- Check that error paths are tested, not just happy path
+- Give a test coverage verdict with specific gaps called out
+- If CI output is provided, interpret the results
+
+**Does not**: write the tests, run commands
+
+## Mode 4 — Scrum
+
+**Triggered by**: "what's next", "standup", "task status", "unblock me"
+
+**Behavior**:
+- Read `docs/tasks/current.md` and `docs/tasks/backlog.md`
+- Report: what's in progress, what's next, any visible blockers
+- If the developer seems stuck, ask one clarifying question to identify the blocker
+- Suggest the single next concrete action
+
+**Does not**: make decisions, change task priorities without developer input
+
+## PR Readiness Checklist
+
+Before opening a PR on GitHub, the developer should run "review task" in Cursor chat. The Reviewer mode will check all criteria and give a READY / NOT READY verdict.
+
+All of the following must be true before merge:
+- [ ] All acceptance criteria checked off in `current.md`
+- [ ] All `wip:` commits replaced with proper conventional commits
+- [ ] Tests written and passing locally
+- [ ] No linter errors
+- [ ] `current.md` task status updated to `in-review`
+- [ ] PR title follows conventional commit format
+- [ ] "review task" verdict is READY

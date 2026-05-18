@@ -1,0 +1,108 @@
+---
+description: System architecture, service boundaries, and data flow
+alwaysApply: true
+---
+
+# Architecture
+
+## Monorepo Layout (planned)
+
+```
+streawman/
+├── apps/
+│   └── streawman-ui/         ← Next.js app (upload + watch in one)
+├── services/
+│   ├── core-api/             ← C++ Drogon — auth, users, video metadata, search, favorites
+│   ├── uploader-api/         ← C++ Drogon — file ingestion + transcoding trigger only
+│   └── watcher-api/          ← C++ Drogon — HLS manifest + segment serving only
+├── infra/
+│   ├── docker/               ← Dockerfiles per service
+│   └── compose/              ← docker-compose files (dev / prod)
+├── .github/
+│   └── workflows/            ← GitHub Actions (one workflow per service + deploy)
+├── tests/
+│   └── load/                 ← k6 load and stress test scripts
+├── docs/
+│   ├── system-design/        ← diagrams, capacity estimates, flow docs
+│   └── adr/                  ← Architecture Decision Records
+├── prd.md
+└── AGENTS.md
+```
+
+## Data Flow
+
+```
+User (browser)
+  │
+  ├─→ Nginx (streawman.codigor.dev)
+  │       │
+  │       ├─→ /              → streawman-ui (Next.js SSR, port 3000)
+  │       ├─→ /api/auth/     → core-api (port 8080)
+  │       ├─→ /api/users/    → core-api (port 8080)
+  │       ├─→ /api/videos/   → core-api (port 8080)
+  │       ├─→ /api/upload/   → uploader-api (port 8081)
+  │       └─→ /stream/       → watcher-api (port 8082)
+  │
+  ├─→ core-api (Drogon/C++)
+  │       └─→ auth: JWT issue + refresh rotation (Redis)
+  │       └─→ users, video catalog, search, favorites (PostgreSQL)
+  │
+  ├─→ uploader-api (Drogon/C++)
+  │       └─→ saves raw file to disk
+  │       └─→ enqueues transcode job in Redis → responds 202
+  │       └─→ [thread pool] parallel FFmpeg per resolution → HLS segments
+  │       └─→ updates PostgreSQL status → notifies user
+  │
+  ├─→ watcher-api (Drogon/C++)
+  │       └─→ serves master.m3u8 + resolution playlists + .ts segments
+  │       └─→ hls.js switches quality automatically
+  │
+  ├─→ PgBouncer (connection pool proxy, port 5432)
+  │       └─→ PostgreSQL ← users, video metadata, transcode_jobs
+  │               └─→ [Phase 2] read replica ← watcher-api + read paths
+  └─→ Redis ← refresh tokens · transcode job queue · metadata cache
+```
+
+## Auth Flow
+
+```
+Login request
+  └─→ validate credentials (PostgreSQL)
+  └─→ issue access token (JWT, 15min, role claim, memory-only)
+  └─→ issue refresh token (opaque, 30d, stored in Redis + HttpOnly cookie)
+
+Refresh request
+  └─→ validate refresh token in Redis
+  └─→ mark old token as used, issue new refresh token (rotation)
+  └─→ if reuse detected → revoke all tokens for user, force re-login
+
+Per-request auth
+  └─→ validate JWT signature + expiry
+  └─→ check role claim against required permission
+  └─→ no Redis/DB call needed per request (stateless access token)
+```
+
+## Key Decisions Still Open
+
+- Services communicate via **REST (HTTP/JSON)** — see ADR 009
+- Chunk storage: `{CHUNK_STORAGE_PATH}/{video_id}/{resolution}/seg_%04d.ts` — see ADR 010
+- Nginx routing rules: which URL paths proxy to which service — [FILL: define before infra setup]
+- Message queue: Redis List for now; RabbitMQ upgrade planned (discussion pending)
+
+## Architecture Decision Records
+
+All decisions live in `docs/adr/`. See existing ADRs:
+- `001-cpp-framework.md` — Drogon
+- `002-database.md` — PostgreSQL + Redis
+- `003-auth-strategy.md` — Dual-token JWT with refresh rotation
+- `004-transcoding.md` — FFmpeg CLI → libav migration path
+- `005-load-testing.md` — k6
+- `006-streaming-protocol.md` — HLS
+- `007-reverse-proxy.md` — Nginx
+- `008-async-transcoding.md` — Parallel FFmpeg per resolution, Redis job queue
+- `009-inter-service-communication.md` — REST everywhere
+- `010-chunk-storage-naming.md` — Option B + seg_%04d.ts
+- `011-service-architecture.md` — 3 C++ backend services, service boundaries
+- `017-database-ownership.md` — Shared DB + PgBouncer + read replica roadmap (sharding non-decision)
+
+Each ADR: context → options considered → decision → consequences.

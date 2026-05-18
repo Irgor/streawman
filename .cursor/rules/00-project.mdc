@@ -1,0 +1,49 @@
+---
+description: Project overview, purpose, and key constraints
+alwaysApply: true
+---
+
+# Streawman — Project Overview
+
+**Target completion: end of June 2026 (flexible — personal project, learning comes first).** Prefer simpler solutions that ship over complex ones that don't. Features can be layered in after the core works.
+
+Streawman (portmanteau of *streaming* + *straw man*) is a **personal portfolio and study project**.
+Its purpose is to demonstrate full-stack, infra, and system design skills by building a real product from scratch.
+
+## What It Does
+
+A self-hosted platform to upload, transcode, and stream personal videos and photos with adaptive quality based on the viewer's connection speed.
+
+## Services
+
+- **streawman-ui** — Single Next.js app: permission-gated upload area + public watch/stream area.
+- **core-api** — Auth (JWT + refresh rotation), user profiles, video metadata, search, favorites.
+- **uploader-api** — File ingestion only: receives upload, saves to disk, triggers transcoding job, returns 202.
+- **watcher-api** — HLS streaming only: serves `.m3u8` manifests and `.ts` segments from disk.
+
+## Stack
+
+| Layer | Choice | Status |
+|---|---|---|
+| Frontend | Next.js (SSR focus) | Decided |
+| Backend framework | Drogon (C++) — 3 services | Decided — see ADR 001, 011 |
+| Streaming protocol | HLS (.m3u8 manifest + .ts segments) | Decided — see ADR 006 |
+| Primary database | PostgreSQL | Decided — see ADR 002 |
+| Cache / session store | Redis | Decided — see ADR 002 |
+| Auth | Dual-token JWT + refresh rotation via Redis | Decided — see ADR 003 |
+| Auth roles | `viewer` (watch only) · `uploader` (watch + upload) | Decided |
+| File storage | Local disk (VPS → home server), path via env var | Decided |
+| Transcoding | FFmpeg CLI, async — parallel per resolution via thread pool | Decided — see ADR 004, 008 |
+| Load testing | k6 with threshold-based CI reports | Decided — see ADR 005 |
+
+## Domain
+
+`streawman.codigor.dev` (subdomain of existing `codigor.dev`)
+
+## Skills Being Demonstrated
+
+1. Modern FE — Next.js SSR, consistent UI
+2. Systems BE — C++ (Drogon), async streaming, RBAC
+3. System Design — documented ADRs, service boundaries, data flows
+4. Infra — Hetzner VPS → home server, Docker, Nginx, CI/CD pipeline, custom domain
+5. Quality — k6 load/stress tests with automated threshold reports

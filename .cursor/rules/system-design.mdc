@@ -1,0 +1,85 @@
+---
+description: System design documentation standards — diagrams, flows, and capacity thinking
+globs: docs/system-design/**,docs/adr/**
+alwaysApply: false
+---
+
+# System Design
+
+## Purpose
+
+System design is a first-class deliverable in this project — it demonstrates the ability to reason about architecture before writing code. Every service must be designed on paper before implementation starts.
+
+## Where docs live
+
+```
+docs/
+├── system-design/
+│   ├── overview.md           ← full system diagram and service map
+│   ├── upload-flow.md        ← end-to-end flow: browser → uploader-api → storage
+│   ├── stream-flow.md        ← end-to-end flow: browser → watcher-api → player
+│   ├── capacity.md           ← storage estimates, bandwidth, concurrency limits
+│   └── [FILL: add one doc per major design area]
+└── adr/
+    ├── 001-streaming-protocol.md
+    ├── 002-cpp-framework.md
+    └── [FILL: one ADR per architectural decision]
+```
+
+## What each system design doc must cover
+
+1. **What problem it solves** — one paragraph, no jargon
+2. **Components involved** — list all services, storage, and external systems
+3. **Data flow** — step-by-step, numbered, with the happy path and at least one failure case
+4. **Interfaces** — how components talk to each other (HTTP, file system, shared volume, etc.)
+5. **Open questions** — what is still undecided and needs an ADR
+
+## ADR Format
+
+Each `docs/adr/NNN-title.md` must follow this structure:
+
+```markdown
+# NNN — Decision Title
+
+**Date**: YYYY-MM-DD
+**Status**: Proposed | Accepted | Superseded by ADR-NNN
+
+## Context
+What is the problem? Why is a decision needed now?
+
+## Options Considered
+- Option A: description + tradeoffs
+- Option B: description + tradeoffs
+- Option C: description + tradeoffs
+
+## Decision
+Which option was chosen and why.
+
+## Consequences
+What does this decision make easier? What does it make harder?
+```
+
+## Closed ADRs (decisions made)
+
+- [x] 001 — C++ framework: Drogon
+- [x] 002 — Database: PostgreSQL + Redis
+- [x] 003 — Auth: dual-token JWT + refresh rotation
+- [x] 004 — Transcoding: FFmpeg CLI → libav later
+- [x] 005 — Load testing: k6
+- [x] 006 — Streaming protocol: HLS
+- [x] 007 — Reverse proxy: Nginx (routing fully defined)
+- [x] 008 — Async transcoding: parallel FFmpeg per resolution, Redis queue
+- [x] 009 — Inter-service: REST everywhere
+- [x] 010 — Chunk naming: Option B + seg_%04d.ts
+- [x] 011 — Service architecture: 3 C++ services (core-api, uploader-api, watcher-api)
+
+## Open ADRs (still to decide)
+
+- [x] 013 — Job queue: Redis List + manual DLQ (RabbitMQ deferred to Phase 2)
+- [x] 012 — Build system: CMake + Ninja
+- [x] 015 — C++ unit testing: Google Test + gmock
+- [x] 014 — CI/CD: GitHub Actions + Monorepo, path-triggered workflows
+- [ ] C++ unit test framework — Catch2 vs Google Test
+- [x] 016 — Styling: Tailwind CSS
+- [x] 017 — DB ownership: Shared DB + PgBouncer + read replica (Phase 2). Sharding: non-decision.
+- [ ] [FILL: add more as you discover them]

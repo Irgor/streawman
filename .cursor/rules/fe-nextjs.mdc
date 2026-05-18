@@ -1,0 +1,59 @@
+---
+description: Next.js frontend conventions for streawman-ui
+globs: apps/streawman-ui/**
+alwaysApply: false
+---
+
+# Frontend — Next.js (streawman-ui)
+
+## What this app covers
+
+A single Next.js app with two distinct areas:
+- **Watch area** — public or permission-gated pages to browse and stream videos/photos
+- **Upload area** — restricted section for uploading content (requires elevated permissions)
+
+## Philosophy
+
+- Server Components by default, Client Components only when interactivity requires it
+- SSR is a first-class concern — this is explicitly for portfolio demonstration of SSR knowledge
+- No client-side data fetching where server fetching is possible
+
+## Directory Structure (inside `apps/streawman-ui/`)
+
+```
+src/
+├── app/                      ← Next.js App Router pages
+│   ├── (watch)/              ← public/viewer-facing routes
+│   │   ├── page.tsx          ← home / content listing
+│   │   └── [id]/             ← individual video/photo stream page
+│   └── (upload)/             ← permission-gated upload routes
+│       └── upload/
+├── components/
+│   ├── ui/                   ← primitive UI components
+│   └── features/
+│       ├── player/           ← video player and quality switching
+│       └── uploader/         ← file upload flow
+├── lib/
+│   ├── auth.ts               ← [FILL: auth helpers]
+│   ├── uploader-api.ts       ← typed wrappers for uploader-api calls
+│   └── watcher-api.ts        ← typed wrappers for watcher-api calls
+├── hooks/                    ← custom React hooks
+└── types/                    ← shared TypeScript types
+```
+
+## Rules
+
+- All pages in `app/` are Server Components unless they have `'use client'` at the top
+- `'use client'` must have a comment explaining why it can't be a Server Component
+- Forms use [FILL: Server Actions or client-side fetch?]
+- Styling: **Tailwind CSS** — see ADR 016
+- No inline styles except for truly dynamic values (e.g. a width calculated at runtime)
+- No arbitrary Tailwind values (`w-[347px]`) unless there is no token that fits — use design tokens first
+
+## Video Player
+
+- Library: **hls.js** — matches the HLS streaming protocol decision (ADR 006)
+- Player component lives in `components/features/player/`
+- Player requests `master.m3u8` from `watcher-api`; `hls.js` handles quality switching automatically
+- Manual quality override UI (resolution selector) is a stretch goal — keep in player component if added
+- Player is always a Client Component (`'use client'`) — requires browser MediaSource API

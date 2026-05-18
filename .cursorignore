@@ -1,0 +1,55 @@
+# Build outputs
+build/
+dist/
+.next/
+out/
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# C++ artifacts
+*.o
+*.a
+*.so
+*.dylib
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+
+# Compiled binaries
+services/*/bin/
+
+# Lockfiles (no AI context value)
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Env files (never expose secrets)
+.env
+.env.*
+!.env.example
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Media files (binary, no textual value)
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.ts
+*.m3u8
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.gif
+
+# Test coverage
+coverage/
