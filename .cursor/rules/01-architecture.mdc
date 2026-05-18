@@ -25,7 +25,6 @@ streawman/
 ├── docs/
 │   ├── system-design/        ← diagrams, capacity estimates, flow docs
 │   └── adr/                  ← Architecture Decision Records
-├── prd.md
 └── AGENTS.md
 ```
 
