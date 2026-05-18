@@ -4,6 +4,11 @@ Completed tasks with QA verdicts. Newest at top.
 
 ---
 
+## TASK-003: core-api CMake + Ninja build setup
+**Merged**: 2026-05-18
+**PR**: (pending merge)
+**QA verdict**: READY — CMakeLists.txt correct, Drogon fetched via CPM, zero warnings, `./build/core-api` starts and responds with drogon/1.9.10 on port 8080.
+
 ## TASK-002: Docker Compose dev environment
 **Merged**: 2026-05-18
 **PR**: (pending merge)
