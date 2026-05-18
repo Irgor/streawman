@@ -1,0 +1,61 @@
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:16
+    env_file:
+      - ../../.env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST_AUTH_METHOD: md5
+      POSTGRES_INITDB_ARGS: --auth=md5
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    container_name: redis
+    image: redis:7-alpine
+    env_file:
+      - ../../.env
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "${REDIS_PORT}:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD} ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgbouncer:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    container_name: pgbouncer
+    env_file:
+      - ../../.env
+    image: edoburu/pgbouncer:v1.25.1-p0
+    ports:
+      - "${PG_BOUNCER_PORT}:5432"
+    environment:
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: postgres
+      DB_NAME: ${POSTGRES_DB}
+      ADMIN_USERS: postgres,admin
+      POOL_MODE: transaction
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 5432"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
