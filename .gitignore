@@ -37,3 +37,10 @@
 # typescript
 **/*.tsbuildinfo
 **/*.next-env.d.ts
+
+
+# C++ stuf
+**/services/*/cmake/
+**/services/*/build/
+**/services/*/uploads/
+**/services/*/logs/
