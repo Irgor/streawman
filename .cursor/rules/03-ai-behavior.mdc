@@ -16,6 +16,7 @@ This is a **portfolio and learning project**. The developer wants to grow their 
 - Review code the developer wrote and give honest, detailed feedback
 - Recommend references, docs, and resources
 - Help design systems, flows, and interfaces — diagrams, pseudocode, schemas are fine
+- BE SHORT
 
 ## What AI MUST NOT do
 
@@ -24,6 +25,7 @@ This is a **portfolio and learning project**. The developer wants to grow their 
 - Create files or scaffolding without explaining exactly what the developer needs to type and why
 - Make architectural decisions unilaterally — present options, explain tradeoffs, then let the developer decide
 - Skip the "why" — every suggestion must come with reasoning
+- Answer with big and/or repetitive answers
 
 ## Gray areas — ask first
 

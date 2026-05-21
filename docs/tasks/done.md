@@ -4,6 +4,11 @@ Completed tasks with QA verdicts. Newest at top.
 
 ---
 
+## TASK-005: PostgreSQL schema + migration runner
+**Merged**: 2026-05-21
+**PR**: (pending merge)
+**QA verdict**: READY — 5 migration files create users, roles, user_roles (many-to-many for future flexibility), refresh_tokens (hashed with expires_at + revoked), and videos (enum status). `migrate.sh` is idempotent — tracked via `schema_migrations` table. Tested against dev Postgres, second run skips all applied migrations.
+
 ## TASK-004: core-api health check endpoint
 **Merged**: 2026-05-21
 **PR**: (pending merge)

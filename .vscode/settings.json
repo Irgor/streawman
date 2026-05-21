@@ -1,0 +1,10 @@
+{
+    "files.exclude": {
+        "**/build": true,
+        "**/.cache": true,
+        "**/logs": true,
+        "**/uploads": true,
+        "**/_deps": true,
+        "**/compile_commands.json": true
+    }
+}

@@ -4,4 +4,4 @@
 
 **No task in progress.**
 
-Next up: TASK-005 — PostgreSQL schema + migration runner. See `docs/tasks/backlog.md`.
+Next up: TASK-006 — user registration endpoint. See `docs/tasks/backlog.md`.
