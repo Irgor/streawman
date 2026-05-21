@@ -1,14 +1,16 @@
 #include <drogon/drogon.h>
-
+using namespace drogon;
 
 int main() {
 
-    drogon::app()
-        .setLogPath("./logs")
-        .setLogLevel(trantor::Logger::kInfo)
-        .addListener("0.0.0.0", 8080)
-        .setThreadNum(2)
-        .run();
+  uint16_t port = std::getenv("PORT") ? std::stoi(std::getenv("PORT")) : 8080;
 
-    return 0;
+  app()
+      .setLogPath("./logs")
+      .setLogLevel(trantor::Logger::kInfo)
+      .addListener("0.0.0.0", port)
+      .setThreadNum(2)
+      .run();
+
+  return 0;
 }
