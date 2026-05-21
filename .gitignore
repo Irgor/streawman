@@ -38,9 +38,11 @@
 **/*.tsbuildinfo
 **/*.next-env.d.ts
 
+troubleshooting.md
 
 # C++ stuf
 **/services/*/cmake/
 **/services/*/build/
 **/services/*/uploads/
 **/services/*/logs/
+**/services/*/.cache/
